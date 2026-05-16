@@ -6,7 +6,11 @@ Parte da serie **Chaos IAM** | feito pela **Cafe com Solda**.
 
 ## Status
 
-v0.1 - POC funcional com scan simulado. Toda a UI, scene manager, base de cartoes e fluxo end-to-end estao prontos. O que falta e plugar os workers reais de RF (marcados com `TODO(integracao)` em `scenes/chaos_id_scene_scanning.c`).
+**v0.3** - leitura real funcionando em LF e HF.
+
+- **LF (125 kHz)** via `lfrfid_worker` - identifica EM4100, HID Prox, Indala, AWID e variantes. Retorna UID raw em hex + dados parseados (Facility Code, Card Number, Customer ID).
+- **HF (13.56 MHz)** via `nfc_scanner` + `iso14443_3a_poller_sync` - identifica MIFARE Classic/Ultralight/DESFire/Plus, NTAG, FeliCa, iCLASS, ISO15693. Extrai UID, ATQA e SAK.
+- Dossie cruza o protocolo detectado com base interna de 15+ entries, mostrando criptografia usada, vetor de ataque conhecido, ano da quebra publica e nivel de risco (Trivial / Quebrada / Endurecida).
 
 ## Estrutura
 
@@ -61,51 +65,43 @@ Antes do `ufbt launch`, fecha qFlipper e a aba do lab.flipper.net se estiverem a
 
 O `assets/icon.png` ja vem no scaffold (10x10 1-bit, cartao com chip EMV). Pra trocar o desenho, qualquer PNG 10x10 monocromatico serve.
 
-## Como o scan funciona hoje (POC)
+## Como funciona
 
-`scenes/chaos_id_scene_scanning.c` orquestra duas fases sequenciais com timer:
+`scenes/chaos_id_scene_scanning.c` orquestra duas fases sequenciais:
 
-1. **Fase LF** (2.5s): tela "Lendo LF (125 kHz)..." -> sorteio (30% hit) -> se hit, vai pro dossie. Se nao, parte pra fase HF.
-2. **Fase HF** (2.5s): tela "Lendo HF (13.56 MHz)..." -> sorteio (70% hit) -> dossie ou tela de "nada detectado".
+### Fase LF (125 kHz) - ate 4s
 
-O dossie e renderizado em `chaos_id_scene_result.c` usando `widget_add_text_scroll_element` (scroll vertical com a roda).
+1. Aloca `ProtocolDict` com todos os protocolos LF disponiveis (`lfrfid_protocols`)
+2. Inicia `LFRFIDWorker` em modo `LFRFIDWorkerReadTypeAuto` (cicla ASK e PSK)
+3. Callback `lf_read_callback` dispara em `LFRFIDWorkerReadDone`:
+   - `protocol_dict_get_data()` retorna os bytes raw -> formatados como hex no campo UID
+   - `protocol_dict_render_brief_data()` retorna campos parseados (FC, Card, CL, decimal)
+   - `protocol_dict_get_name()` retorna o nome -> `cards_db_find_by_lfrfid_name()` mapeia pro DB
+4. Se nada detectado em 4s, transita pra fase HF
 
-## Plugando RF real (proximo passo)
+### Fase HF (13.56 MHz) - ate 2.5s + ~300ms de activation
 
-No `scenes/chaos_id_scene_scanning.c`, substitui os timers + sorteios pelos workers do firmware:
+1. Aloca `Nfc` e `NfcScanner` (greedy, varre todos os protocolos em paralelo)
+2. Callback `hf_scanner_callback` dispara em `NfcScannerEventTypeDetected`:
+   - Salva o protocolo (mais especifico primeiro) e delega pro UI thread via custom event
+   - Nao para o scanner daqui (deadlock - somos a worker thread dele)
+3. UI thread recebe `HfDetected`, para o scanner, chama `iso14443_3a_poller_sync_read()`:
+   - Bloqueia ~200-300ms refazendo activation ISO14443-3A (sem crypto, sem dictionary attack)
+   - Retorna struct com UID + ATQA + SAK
+4. `nfc_device_get_protocol_name()` + `cards_db_find_by_nfc_name()` mapeiam pro DB
 
-**LF** - usa `lib/lfrfid`:
-```c
-#include <lib/lfrfid/lfrfid_worker.h>
+### Threading
 
-LFRFIDWorker* lf_worker = lfrfid_worker_alloc(protocols_dict);
-lfrfid_worker_start_thread(lf_worker);
-lfrfid_worker_read_start(
-    lf_worker, LFRFIDWorkerReadTypeAuto, lf_callback, app);
-```
-
-O `lf_callback` recebe `LFRFIDWorkerReadResult` e o nome do protocolo detectado. Cruza com `cards_db` por string match no campo `protocol` e seta `app->last_result`.
-
-**HF** - usa `lib/nfc`:
-```c
-#include <lib/nfc/nfc.h>
-#include <lib/nfc/nfc_poller.h>
-#include <lib/nfc/protocols/iso14443_3a/iso14443_3a_poller.h>
-
-Nfc* nfc = nfc_alloc();
-NfcPoller* poller = nfc_poller_alloc(nfc, NfcProtocolIso14443_3a);
-nfc_poller_start(poller, hf_callback, app);
-```
-
-Pro MIFARE Classic, depois do detect basico em 14443-3a, instancia `nfc_poller_alloc(nfc, NfcProtocolMfClassic)` pra refinar (1K vs 4K, plus, etc).
-
-UID real vem dos dados retornados pelo poller - escreve em `app->uid_buffer` com `snprintf` igual ja faz o `generate_fake_uid` na POC.
+LFRFID worker e NfcScanner rodam em threads proprias. Todo callback de RF fala com a UI thread via `view_dispatcher_send_custom_event()` - nunca chame APIs de view/scene_manager direto da worker thread (deadlock).
 
 ## Roadmap
 
-- **v0.2** persistencia: salva cada scan em `/ext/apps_data/chaos_id/log.csv` (timestamp, protocol, uid, risk).
-- **v0.3** botao "Investigar" no dossie de cartoes broken: pra MIFARE Classic chama nested attack direto.
-- **v0.4** i18n EN/PT, splash com identidade visual Cafe com Solda, submit pro app catalog oficial.
+- [x] **v0.1** - UI + scene manager + base de cartoes + scan simulado
+- [x] **v0.2** - integracao real com `lfrfid_worker` (LF) e `nfc_scanner` (HF)
+- [x] **v0.3** - extracao de UID/ATQA/SAK via `iso14443_3a_poller_sync`
+- [ ] **v0.4** - persistencia: salva cada scan em `/ext/apps_data/chaos_id/log.csv` (timestamp, protocol, UID, risk)
+- [ ] **v0.5** - botao "Investigar" no dossie de cartoes broken: pra MIFARE Classic chama nested attack direto
+- [ ] **v0.6** - i18n EN/PT, splash com identidade visual Cafe com Solda, submit pro app catalog oficial
 
 ## Licenca
 
