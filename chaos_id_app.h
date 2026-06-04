@@ -20,10 +20,13 @@
 #include <nfc/nfc_scanner.h>
 #include <nfc/nfc_device.h>
 #include <nfc/protocols/nfc_protocol.h>
+#include <nfc/protocols/mf_classic/mf_classic.h>
 
 #include <storage/storage.h>
 
 #include "database/cards_db.h"
+
+#define CHAOSID_MAX_SECTORS 40  // espelha MF_CLASSIC_TOTAL_SECTORS_MAX
 
 typedef enum {
     ChaosIdSceneSplash,
@@ -31,6 +34,7 @@ typedef enum {
     ChaosIdSceneResult,
     ChaosIdSceneHistory,
     ChaosIdSceneAbout,
+    ChaosIdSceneAttack,
     ChaosIdSceneCount,
 } ChaosIdScene;
 
@@ -49,7 +53,36 @@ typedef enum {
     ChaosIdCustomEventHfDetected,
     ChaosIdCustomEventCardFound,
     ChaosIdCustomEventScanFailed,
+    // v0.5
+    ChaosIdCustomEventInvestigate,
+    ChaosIdCustomEventAttackProgress,
+    ChaosIdCustomEventAttackComplete,
 } ChaosIdCustomEvent;
+
+// Estado do ataque de dicionario contra MIFARE Classic (v0.5)
+typedef struct {
+    MfClassicType type;
+    uint8_t total_sectors;
+
+    // Progresso atual
+    uint8_t current_sector;
+    MfClassicKeyType current_key_type;
+    size_t current_key_idx;
+
+    // Resultados acumulados
+    bool sector_a_found[CHAOSID_MAX_SECTORS];
+    bool sector_b_found[CHAOSID_MAX_SECTORS];
+    MfClassicKey found_key_a[CHAOSID_MAX_SECTORS];
+    MfClassicKey found_key_b[CHAOSID_MAX_SECTORS];
+    uint8_t keys_found;
+    uint8_t sectors_fully_cracked;
+
+    // Controle de thread
+    FuriThread* thread;
+    bool stop;
+    bool failed;
+    bool complete;
+} AttackContext;
 
 typedef struct {
     Gui* gui;
@@ -63,14 +96,14 @@ typedef struct {
     Storage* storage;
 
     FuriTimer* scan_timer;
-    uint8_t scan_phase; // 0 = LF, 1 = HF
+    uint8_t scan_phase;
 
-    // LF worker state
+    // LF worker (app-lifetime)
     LFRFIDWorker* lf_worker;
     ProtocolDict* lf_dict;
     bool lf_done;
 
-    // HF scanner state
+    // HF scanner (app-lifetime nfc, per-scan scanner)
     Nfc* nfc;
     NfcScanner* nfc_scanner;
     bool hf_done;
@@ -79,4 +112,6 @@ typedef struct {
     const CardProfile* last_result;
     char uid_buffer[48];
     char card_data_buffer[48];
+
+    AttackContext attack;
 } ChaosIdApp;

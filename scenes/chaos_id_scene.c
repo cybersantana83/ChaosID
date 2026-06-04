@@ -10,6 +10,7 @@ static void (*const chaos_id_on_enter[])(void*) = {
     chaos_id_scene_result_on_enter,
     chaos_id_scene_history_on_enter,
     chaos_id_scene_about_on_enter,
+    chaos_id_scene_attack_on_enter,
 };
 
 static bool (*const chaos_id_on_event[])(void*, SceneManagerEvent) = {
@@ -18,6 +19,7 @@ static bool (*const chaos_id_on_event[])(void*, SceneManagerEvent) = {
     chaos_id_scene_result_on_event,
     chaos_id_scene_history_on_event,
     chaos_id_scene_about_on_event,
+    chaos_id_scene_attack_on_event,
 };
 
 static void (*const chaos_id_on_exit[])(void*) = {
@@ -26,6 +28,7 @@ static void (*const chaos_id_on_exit[])(void*) = {
     chaos_id_scene_result_on_exit,
     chaos_id_scene_history_on_exit,
     chaos_id_scene_about_on_exit,
+    chaos_id_scene_attack_on_exit,
 };
 
 const SceneManagerHandlers chaos_id_scene_handlers = {

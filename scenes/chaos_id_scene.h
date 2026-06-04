@@ -25,4 +25,8 @@ void chaos_id_scene_about_on_enter(void* context);
 bool chaos_id_scene_about_on_event(void* context, SceneManagerEvent event);
 void chaos_id_scene_about_on_exit(void* context);
 
+void chaos_id_scene_attack_on_enter(void* context);
+bool chaos_id_scene_attack_on_event(void* context, SceneManagerEvent event);
+void chaos_id_scene_attack_on_exit(void* context);
+
 extern const SceneManagerHandlers chaos_id_scene_handlers;
