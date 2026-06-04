@@ -26,7 +26,7 @@
 
 #include "database/cards_db.h"
 
-#define CHAOSID_MAX_SECTORS 40  // espelha MF_CLASSIC_TOTAL_SECTORS_MAX
+#define CHAOSID_MAX_SECTORS 40 // espelha MF_CLASSIC_TOTAL_SECTORS_MAX
 
 typedef enum {
     ChaosIdSceneSplash,

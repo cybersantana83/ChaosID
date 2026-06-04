@@ -15,21 +15,13 @@ void chaos_id_scene_history_on_enter(void* context) {
         has_data = scan_log_read_display(app->storage, content);
     }
 
-    widget_add_string_element(
-        app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Historico");
+    widget_add_string_element(app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Historico");
 
     if(!has_data || furi_string_size(content) == 0) {
         widget_add_string_element(
-            app->widget,
-            64,
-            32,
-            AlignCenter,
-            AlignCenter,
-            FontSecondary,
-            "Sem scans ainda");
+            app->widget, 64, 32, AlignCenter, AlignCenter, FontSecondary, "Sem scans ainda");
     } else {
-        widget_add_text_scroll_element(
-            app->widget, 0, 14, 128, 50, furi_string_get_cstr(content));
+        widget_add_text_scroll_element(app->widget, 0, 14, 128, 50, furi_string_get_cstr(content));
     }
 
     furi_string_free(content);

@@ -13,9 +13,9 @@
 #include <stddef.h>
 
 typedef enum {
-    CardRiskTrivial,   // clona em segundos com qualquer Flipper / Proxmark
-    CardRiskBroken,    // crypto quebrada, requer ataque mas e' viavel
-    CardRiskHardened,  // considerado seguro hoje (se bem implementado)
+    CardRiskTrivial, // clona em segundos com qualquer Flipper / Proxmark
+    CardRiskBroken, // crypto quebrada, requer ataque mas e' viavel
+    CardRiskHardened, // considerado seguro hoje (se bem implementado)
     CardRiskUnknown,
 } CardRisk;
 
@@ -25,14 +25,14 @@ typedef enum {
 } CardFrequency;
 
 typedef struct {
-    const char* protocol;        // "MIFARE Classic 1K"
+    const char* protocol; // "MIFARE Classic 1K"
     CardFrequency frequency;
-    const char* typical_use;     // "Transporte, cracha corporativo"
-    const char* crypto;          // "Crypto1 (proprietaria, quebrada)"
-    const char* attack_vector;   // "Nested / Darkside / MFKey32"
-    const char* year_broken;     // "2008" ou "-"
+    const char* typical_use; // "Transporte, cracha corporativo"
+    const char* crypto; // "Crypto1 (proprietaria, quebrada)"
+    const char* attack_vector; // "Nested / Darkside / MFKey32"
+    const char* year_broken; // "2008" ou "-"
     CardRisk risk;
-    const char* notes;           // observacoes extras
+    const char* notes; // observacoes extras
 } CardProfile;
 
 extern const CardProfile cards_db[];

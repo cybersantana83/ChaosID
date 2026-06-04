@@ -57,8 +57,7 @@ static int32_t attack_thread_run(void* arg) {
     if(err != MfClassicErrorNone) {
         FURI_LOG_W("ChaosID", "[attack] detect_type falhou: err=%d", (int)err);
         ctx->failed = true;
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventAttackComplete);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventAttackComplete);
         return 0;
     }
 
@@ -86,8 +85,7 @@ static int32_t attack_thread_run(void* arg) {
                 memcpy(key.data, default_keys[k], MF_CLASSIC_KEY_SIZE);
 
                 MfClassicAuthContext auth_ctx;
-                err = mf_classic_poller_sync_auth(
-                    app->nfc, sector_trailer, &key, kt, &auth_ctx);
+                err = mf_classic_poller_sync_auth(app->nfc, sector_trailer, &key, kt, &auth_ctx);
 
                 if(err == MfClassicErrorNone) {
                     // Chave bate! Salva e parte pro proximo key_type
@@ -119,13 +117,11 @@ static int32_t attack_thread_run(void* arg) {
         }
 
         // Atualiza UI a cada setor concluido
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventAttackProgress);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventAttackProgress);
     }
 
     ctx->complete = true;
-    view_dispatcher_send_custom_event(
-        app->view_dispatcher, ChaosIdCustomEventAttackComplete);
+    view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventAttackComplete);
     return 0;
 }
 
@@ -176,30 +172,27 @@ static void show_final_result(ChaosIdApp* app) {
     }
 
     widget_reset(app->widget);
-    widget_add_string_element(
-        app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Resultado");
+    widget_add_string_element(app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "Resultado");
 
     FuriString* text = furi_string_alloc();
     furi_string_cat_printf(text, "Tipo: %s\n", mfc_type_label(ctx->type));
     furi_string_cat_printf(
-        text,
-        "Chaves OK: %u/%u\n",
-        ctx->keys_found,
-        (unsigned)(ctx->total_sectors * 2));
+        text, "Chaves OK: %u/%u\n", ctx->keys_found, (unsigned)(ctx->total_sectors * 2));
     furi_string_cat_printf(
-        text,
-        "Setores 100%%: %u/%u\n\n",
-        ctx->sectors_fully_cracked,
-        ctx->total_sectors);
+        text, "Setores 100%%: %u/%u\n\n", ctx->sectors_fully_cracked, ctx->total_sectors);
 
     if(ctx->sectors_fully_cracked == ctx->total_sectors) {
-        furi_string_cat_str(text, "*** TOTALMENTE CLONAVEL ***\nDicionario default\nresolve esse cartao\nem 30 segundos.\n");
+        furi_string_cat_str(
+            text,
+            "*** TOTALMENTE CLONAVEL ***\nDicionario default\nresolve esse cartao\nem 30 segundos.\n");
     } else if(ctx->sectors_fully_cracked > 0) {
-        furi_string_cat_str(text, "PARCIALMENTE QUEBRADO\nNested attack pode\ncompletar o resto.\n");
+        furi_string_cat_str(
+            text, "PARCIALMENTE QUEBRADO\nNested attack pode\ncompletar o resto.\n");
     } else if(ctx->keys_found > 0) {
         furi_string_cat_str(text, "Algumas chaves caem.\nNested attack pega o resto.\n");
     } else {
-        furi_string_cat_str(text, "Sem chaves default.\nResistente a dicionario.\nNested necessario.\n");
+        furi_string_cat_str(
+            text, "Sem chaves default.\nResistente a dicionario.\nNested necessario.\n");
     }
 
     // Lista chaves encontradas
@@ -233,8 +226,7 @@ static void show_final_result(ChaosIdApp* app) {
         }
     }
 
-    widget_add_text_scroll_element(
-        app->widget, 0, 14, 128, 50, furi_string_get_cstr(text));
+    widget_add_text_scroll_element(app->widget, 0, 14, 128, 50, furi_string_get_cstr(text));
     furi_string_free(text);
 
     view_dispatcher_switch_to_view(app->view_dispatcher, ChaosIdViewWidget);
@@ -254,13 +246,7 @@ void chaos_id_scene_attack_on_enter(void* context) {
     // UI inicial
     popup_reset(app->popup);
     popup_set_header(app->popup, "Investigando", 64, 10, AlignCenter, AlignTop);
-    popup_set_text(
-        app->popup,
-        "Mantenha o cartao\nno Flipper",
-        64,
-        35,
-        AlignCenter,
-        AlignTop);
+    popup_set_text(app->popup, "Mantenha o cartao\nno Flipper", 64, 35, AlignCenter, AlignTop);
     view_dispatcher_switch_to_view(app->view_dispatcher, ChaosIdViewScanning);
 
     // Spawn worker thread
@@ -286,8 +272,7 @@ bool chaos_id_scene_attack_on_event(void* context, SceneManagerEvent event) {
     } else if(event.type == SceneManagerEventTypeBack) {
         // Sinaliza thread pra parar; on_exit faz join
         app->attack.stop = true;
-        scene_manager_search_and_switch_to_previous_scene(
-            app->scene_manager, ChaosIdSceneSplash);
+        scene_manager_search_and_switch_to_previous_scene(app->scene_manager, ChaosIdSceneSplash);
         consumed = true;
     }
 

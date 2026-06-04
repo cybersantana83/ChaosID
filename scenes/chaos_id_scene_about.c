@@ -13,10 +13,13 @@
 void chaos_id_scene_about_on_enter(void* context) {
     ChaosIdApp* app = context;
     widget_reset(app->widget);
-    widget_add_string_element(
-        app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "ChaosID");
+    widget_add_string_element(app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, "ChaosID");
     widget_add_text_scroll_element(
-        app->widget, 0, 14, 128, 50,
+        app->widget,
+        0,
+        14,
+        128,
+        50,
         "Perito forense de cartoes\n"
         "LF (125 kHz) + HF (13.56 MHz)\n"
         "\n"

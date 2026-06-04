@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CSV_HEADER     "timestamp,freq,protocol,uid,data,risk\n"
-#define READ_BUF_SIZE  8192U
+#define CSV_HEADER    "timestamp,freq,protocol,uid,data,risk\n"
+#define READ_BUF_SIZE 8192U
 
 static void csv_escape(char* dst, size_t dst_size, const char* src) {
     if(!src) {
@@ -126,8 +126,8 @@ bool scan_log_read_display(Storage* storage, FuriString* out) {
 
         if(strlen(line_start) > 0) {
             char ts[24] = {0}, freq[24] = {0}, proto[48] = {0}, uid[48] = {0};
-            int parsed = sscanf(
-                line_start, "%23[^,],%23[^,],%47[^,],%47[^,]", ts, freq, proto, uid);
+            int parsed =
+                sscanf(line_start, "%23[^,],%23[^,],%47[^,],%47[^,]", ts, freq, proto, uid);
 
             if(parsed >= 3) {
                 furi_string_cat_printf(out, "%s\n  %s\n", ts, proto);

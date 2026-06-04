@@ -50,8 +50,7 @@ static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol,
 
     furi_string_reset(tmp);
     protocol_dict_render_brief_data(app->lf_dict, tmp, proto_index);
-    strncpy(
-        app->card_data_buffer, furi_string_get_cstr(tmp), sizeof(app->card_data_buffer) - 1);
+    strncpy(app->card_data_buffer, furi_string_get_cstr(tmp), sizeof(app->card_data_buffer) - 1);
     app->card_data_buffer[sizeof(app->card_data_buffer) - 1] = '\0';
 
     FURI_LOG_I(
@@ -67,12 +66,10 @@ static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol,
     app->last_result = cards_db_find_by_lfrfid_name(proto_name);
 
     if(app->last_result) {
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventCardFound);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventCardFound);
     } else {
         FURI_LOG_W("ChaosID", "LF detectado mas nao mapeado: '%s'", proto_name);
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventScanFailed);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventScanFailed);
     }
 }
 
@@ -86,8 +83,7 @@ static void start_phase_lf(ChaosIdApp* app) {
 
     // lf_dict e lf_worker ja alocados em chaos_id_app_alloc (app-lifetime)
     lfrfid_worker_start_thread(app->lf_worker);
-    lfrfid_worker_read_start(
-        app->lf_worker, LFRFIDWorkerReadTypeAuto, lf_read_callback, app);
+    lfrfid_worker_read_start(app->lf_worker, LFRFIDWorkerReadTypeAuto, lf_read_callback, app);
 
     furi_timer_start(app->scan_timer, furi_ms_to_ticks(LF_PHASE_DURATION_MS));
 }
@@ -120,8 +116,7 @@ static void hf_scanner_callback(NfcScannerEvent event, void* context) {
         (unsigned)event.data.protocol_num,
         (unsigned)event.data.protocols[0]);
 
-    view_dispatcher_send_custom_event(
-        app->view_dispatcher, ChaosIdCustomEventHfDetected);
+    view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventHfDetected);
 }
 
 static void start_phase_hf(ChaosIdApp* app) {
@@ -155,11 +150,9 @@ static void stop_hf_scanner(ChaosIdApp* app) {
 static void scan_timer_callback(void* context) {
     ChaosIdApp* app = context;
     if(app->scan_phase == 0) {
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventPhaseLfDone);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventPhaseLfDone);
     } else if(app->scan_phase == 1) {
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventPhaseHfDone);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventPhaseHfDone);
     }
 }
 
@@ -268,8 +261,7 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
             }
             furi_timer_stop(app->scan_timer);
             stop_hf_scanner(app);
-            view_dispatcher_send_custom_event(
-                app->view_dispatcher, ChaosIdCustomEventScanFailed);
+            view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventScanFailed);
             consumed = true;
             break;
 
@@ -300,12 +292,7 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
             popup_reset(app->popup);
             popup_set_header(app->popup, "Nada detectado", 64, 12, AlignCenter, AlignTop);
             popup_set_text(
-                app->popup,
-                "Reposicione o cartao\ne tente de novo",
-                64,
-                32,
-                AlignCenter,
-                AlignTop);
+                app->popup, "Reposicione o cartao\ne tente de novo", 64, 32, AlignCenter, AlignTop);
             popup_set_timeout(app->popup, 1500);
             popup_enable_timeout(app->popup);
             consumed = true;

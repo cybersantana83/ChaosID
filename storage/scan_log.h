@@ -10,11 +10,11 @@
 #define CHAOS_ID_LOG_FILE "/ext/apps_data/chaos_id/scans.csv"
 
 typedef struct {
-    const char* freq_label;  // ex: "125 kHz (LF)"
-    const char* protocol;    // ex: "EM4100"
-    const char* uid;         // ex: "53 00 1D 84 FF"
-    const char* data;        // ex: "FC: 029 Card: 34047" ou "ATQA: 0004 SAK: 08"
-    const char* risk_label;  // ex: "TRIVIAL - clonavel"
+    const char* freq_label; // ex: "125 kHz (LF)"
+    const char* protocol; // ex: "EM4100"
+    const char* uid; // ex: "53 00 1D 84 FF"
+    const char* data; // ex: "FC: 029 Card: 34047" ou "ATQA: 0004 SAK: 08"
+    const char* risk_label; // ex: "TRIVIAL - clonavel"
 } ScanLogEntry;
 
 /** Adiciona um scan ao log CSV. Cria diretorio e header automaticamente

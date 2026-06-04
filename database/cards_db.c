@@ -263,17 +263,24 @@ const CardProfile* cards_db_find_by_nfc_name(const char* name) {
 
 const char* card_risk_label(CardRisk risk) {
     switch(risk) {
-        case CardRiskTrivial: return "TRIVIAL - clonavel";
-        case CardRiskBroken: return "QUEBRADA - viavel";
-        case CardRiskHardened: return "ENDURECIDA - ok";
-        default: return "DESCONHECIDO";
+    case CardRiskTrivial:
+        return "TRIVIAL - clonavel";
+    case CardRiskBroken:
+        return "QUEBRADA - viavel";
+    case CardRiskHardened:
+        return "ENDURECIDA - ok";
+    default:
+        return "DESCONHECIDO";
     }
 }
 
 const char* card_frequency_label(CardFrequency freq) {
     switch(freq) {
-        case CardFreqLF: return "125 kHz (LF)";
-        case CardFreqHF: return "13.56 MHz (HF)";
-        default: return "?";
+    case CardFreqLF:
+        return "125 kHz (LF)";
+    case CardFreqHF:
+        return "13.56 MHz (HF)";
+    default:
+        return "?";
     }
 }

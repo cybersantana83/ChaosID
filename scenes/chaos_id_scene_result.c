@@ -9,8 +9,7 @@
 static void result_button_callback(GuiButtonType type, InputType input, void* context) {
     ChaosIdApp* app = context;
     if(input == InputTypeShort && type == GuiButtonTypeCenter) {
-        view_dispatcher_send_custom_event(
-            app->view_dispatcher, ChaosIdCustomEventInvestigate);
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventInvestigate);
     }
 }
 
@@ -21,13 +20,7 @@ void chaos_id_scene_result_on_enter(void* context) {
     const CardProfile* p = app->last_result;
     if(!p) {
         widget_add_string_element(
-            app->widget,
-            64,
-            32,
-            AlignCenter,
-            AlignCenter,
-            FontPrimary,
-            "Sem resultado");
+            app->widget, 64, 32, AlignCenter, AlignCenter, FontPrimary, "Sem resultado");
         view_dispatcher_switch_to_view(app->view_dispatcher, ChaosIdViewWidget);
         return;
     }
@@ -46,8 +39,7 @@ void chaos_id_scene_result_on_enter(void* context) {
         furi_string_cat_printf(dossier, "Uso: %s\n", p->typical_use);
     }
     furi_string_cat_printf(dossier, "Cripto: %s\n", p->crypto ? p->crypto : "-");
-    furi_string_cat_printf(
-        dossier, "Ataque: %s\n", p->attack_vector ? p->attack_vector : "-");
+    furi_string_cat_printf(dossier, "Ataque: %s\n", p->attack_vector ? p->attack_vector : "-");
     if(p->year_broken && strcmp(p->year_broken, "-") != 0) {
         furi_string_cat_printf(dossier, "Quebra: %s\n", p->year_broken);
     }
@@ -57,8 +49,7 @@ void chaos_id_scene_result_on_enter(void* context) {
         furi_string_cat_str(dossier, p->notes);
     }
 
-    widget_add_string_element(
-        app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, p->protocol);
+    widget_add_string_element(app->widget, 64, 2, AlignCenter, AlignTop, FontPrimary, p->protocol);
 
     // Encolhe area de scroll quando ha botao pra nao sobrepor
     uint8_t scroll_h = can_attack ? 36 : 50;
@@ -67,11 +58,7 @@ void chaos_id_scene_result_on_enter(void* context) {
 
     if(can_attack) {
         widget_add_button_element(
-            app->widget,
-            GuiButtonTypeCenter,
-            "Investigar",
-            result_button_callback,
-            app);
+            app->widget, GuiButtonTypeCenter, "Investigar", result_button_callback, app);
     }
 
     furi_string_free(dossier);
@@ -88,8 +75,7 @@ bool chaos_id_scene_result_on_event(void* context, SceneManagerEvent event) {
             consumed = true;
         }
     } else if(event.type == SceneManagerEventTypeBack) {
-        scene_manager_search_and_switch_to_previous_scene(
-            app->scene_manager, ChaosIdSceneSplash);
+        scene_manager_search_and_switch_to_previous_scene(app->scene_manager, ChaosIdSceneSplash);
         consumed = true;
     }
 
