@@ -100,6 +100,21 @@ O `assets/icon.png` ja vem no scaffold (10x10 1-bit, cartao com chip EMV). Pra t
 
 LFRFID worker e NfcScanner rodam em threads proprias. Todo callback de RF fala com a UI thread via `view_dispatcher_send_custom_event()` - nunca chame APIs de view/scene_manager direto da worker thread (deadlock).
 
+## Build multi-firmware (release)
+
+Pra gerar `.fap` simultaneamente pra Momentum + firmware oficial da Flipper Devices:
+
+\`\`\`bash
+./scripts/build_multi.sh
+\`\`\`
+
+Saída em `dist/multi/`:
+
+- `chaos_id-momentum.fap` — Momentum firmware
+- `chaos_id-official.fap` — Flipper Devices oficial
+
+O script chaveia o canal SDK do `ufbt`, faz clean + build, e no fim restaura o SDK default (Momentum). Adicionar outros firmwares (Unleashed, RogueMaster) é só descomentar/adicionar linha no array `FIRMWARES=(...)`.
+
 ## Roadmap
 
 - [x] **v0.1** - UI + scene manager + base de cartoes + scan simulado
