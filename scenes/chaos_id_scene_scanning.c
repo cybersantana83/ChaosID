@@ -1,34 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Cafe com Solda / Cristiano Santana
-//
-// This file is part of ChaosID.
-// ChaosID is free software: you can redistribute it and/or modify it under
-// the terms of the GNU General Public License as published by the Free
-// Software Foundation, either version 3 of the License, or (at your option)
-// any later version. See <https://www.gnu.org/licenses/gpl-3.0.html>.
 
 #include "../chaos_id_app.h"
 #include "chaos_id_scene.h"
+#include "../storage/scan_log.h"
 
 #include <string.h>
 #include <nfc/protocols/iso14443_3a/iso14443_3a.h>
 #include <nfc/protocols/iso14443_3a/iso14443_3a_poller_sync.h>
 
-#define LF_PHASE_DURATION_MS 4000 // ciclo ASK + PSK demora ~3-4s
-#define HF_PHASE_DURATION_MS 2500 // tempo p/ scanner detectar protocolo
+#define LF_PHASE_DURATION_MS 4000
+#define HF_PHASE_DURATION_MS 2500
 
 // =========================================================================
-// LF (125 kHz) - INTEGRACAO REAL com lfrfid_worker
+// LF (125 kHz) - app-lifetime worker, start/stop por scan
 // =========================================================================
 
 static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol, void* context) {
     ChaosIdApp* app = context;
 
-    // O worker emite varios eventos (sense start/end, ASK start, PSK start).
-    // Apenas Done indica leitura validada com protocolo identificado.
     if(result != LFRFIDWorkerReadDone) return;
-
-    // Guard: ignora callbacks atrasados apos timeout/transicao
     if(app->lf_done) return;
     app->lf_done = true;
 
@@ -37,8 +28,6 @@ static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol,
 
     FuriString* tmp = furi_string_alloc();
 
-    // UID raw em hex (pra clonagem). render_uid e' no-op em varios protocolos LF,
-    // entao vamos direto nos bytes via protocol_dict_get_data().
     size_t data_size = protocol_dict_get_data_size(app->lf_dict, proto_index);
     if(data_size > 0 && data_size <= 16) {
         uint8_t raw[16];
@@ -51,7 +40,6 @@ static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol,
             p += n;
             remaining -= n;
         }
-        // Remove o espaco em trailing
         if(p > app->uid_buffer && *(p - 1) == ' ')
             *(p - 1) = '\0';
         else
@@ -60,7 +48,6 @@ static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol,
         app->uid_buffer[0] = '\0';
     }
 
-    // Dados parseados (FC, Card Number, etc) - depende do protocolo
     furi_string_reset(tmp);
     protocol_dict_render_brief_data(app->lf_dict, tmp, proto_index);
     strncpy(
@@ -77,14 +64,12 @@ static void lf_read_callback(LFRFIDWorkerReadResult result, ProtocolId protocol,
 
     furi_string_free(tmp);
 
-    // Mapeia nome do protocolo para entrada do DB
     app->last_result = cards_db_find_by_lfrfid_name(proto_name);
 
     if(app->last_result) {
         view_dispatcher_send_custom_event(
             app->view_dispatcher, ChaosIdCustomEventCardFound);
     } else {
-        // Detectou algo mas nao temos no DB - v0.3 podera ter scene "Unknown"
         FURI_LOG_W("ChaosID", "LF detectado mas nao mapeado: '%s'", proto_name);
         view_dispatcher_send_custom_event(
             app->view_dispatcher, ChaosIdCustomEventScanFailed);
@@ -99,8 +84,7 @@ static void start_phase_lf(ChaosIdApp* app) {
     popup_set_header(app->popup, "Aproxime o cartao", 64, 10, AlignCenter, AlignTop);
     popup_set_text(app->popup, "Lendo LF (125 kHz)...", 64, 35, AlignCenter, AlignTop);
 
-    app->lf_dict = protocol_dict_alloc(lfrfid_protocols, LFRFIDProtocolMax);
-    app->lf_worker = lfrfid_worker_alloc(app->lf_dict);
+    // lf_dict e lf_worker ja alocados em chaos_id_app_alloc (app-lifetime)
     lfrfid_worker_start_thread(app->lf_worker);
     lfrfid_worker_read_start(
         app->lf_worker, LFRFIDWorkerReadTypeAuto, lf_read_callback, app);
@@ -112,17 +96,12 @@ static void stop_lf_worker(ChaosIdApp* app) {
     if(app->lf_worker) {
         lfrfid_worker_stop(app->lf_worker);
         lfrfid_worker_stop_thread(app->lf_worker);
-        lfrfid_worker_free(app->lf_worker);
-        app->lf_worker = NULL;
-    }
-    if(app->lf_dict) {
-        protocol_dict_free(app->lf_dict);
-        app->lf_dict = NULL;
+        // NAO frees - worker e dict sao app-lifetime
     }
 }
 
 // =========================================================================
-// HF (13.56 MHz) - INTEGRACAO REAL com nfc_scanner
+// HF (13.56 MHz) - Nfc app-lifetime, scanner por scan
 // =========================================================================
 
 static void hf_scanner_callback(NfcScannerEvent event, void* context) {
@@ -130,14 +109,9 @@ static void hf_scanner_callback(NfcScannerEvent event, void* context) {
 
     if(event.type != NfcScannerEventTypeDetected) return;
     if(event.data.protocol_num == 0) return;
-
-    // Guard: ignora callbacks atrasados apos timeout/transicao
     if(app->hf_done) return;
     app->hf_done = true;
 
-    // Salva o protocolo (primeiro = mais especifico) e delega pro UI thread
-    // fazer o sync_read. Nao podemos parar o scanner daqui (deadlock - somos a
-    // worker thread dele).
     app->detected_protocol = event.data.protocols[0];
 
     FURI_LOG_I(
@@ -158,7 +132,7 @@ static void start_phase_hf(ChaosIdApp* app) {
     popup_set_header(app->popup, "Aproxime o cartao", 64, 10, AlignCenter, AlignTop);
     popup_set_text(app->popup, "Lendo HF (13.56 MHz)...", 64, 35, AlignCenter, AlignTop);
 
-    app->nfc = nfc_alloc();
+    // app->nfc ja alocado em chaos_id_app_alloc (app-lifetime)
     app->nfc_scanner = nfc_scanner_alloc(app->nfc);
     nfc_scanner_start(app->nfc_scanner, hf_scanner_callback, app);
 
@@ -171,10 +145,7 @@ static void stop_hf_scanner(ChaosIdApp* app) {
         nfc_scanner_free(app->nfc_scanner);
         app->nfc_scanner = NULL;
     }
-    if(app->nfc) {
-        nfc_free(app->nfc);
-        app->nfc = NULL;
-    }
+    // NAO freia app->nfc - eh app-lifetime
 }
 
 // =========================================================================
@@ -195,10 +166,7 @@ static void scan_timer_callback(void* context) {
 void chaos_id_scene_scanning_on_enter(void* context) {
     ChaosIdApp* app = context;
     app->last_result = NULL;
-    app->lf_worker = NULL;
-    app->lf_dict = NULL;
     app->lf_done = false;
-    app->nfc = NULL;
     app->nfc_scanner = NULL;
     app->hf_done = false;
     app->uid_buffer[0] = '\0';
@@ -214,8 +182,6 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
     if(event.type == SceneManagerEventTypeCustom) {
         switch(event.event) {
         case ChaosIdCustomEventPhaseLfDone:
-            // Se o callback ja preencheu lf_done, CardFound esta na fila.
-            // Nao transiciona pra HF - aguarda processamento do CardFound.
             if(app->lf_done) {
                 consumed = true;
                 break;
@@ -227,8 +193,6 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
             break;
 
         case ChaosIdCustomEventHfDetected: {
-            // Scanner identificou protocolo. Para o scanner, faz sync_read
-            // pra extrair UID via activation ISO14443-3A (sem crypto, ~200-300ms).
             furi_timer_stop(app->scan_timer);
             if(app->nfc_scanner) {
                 nfc_scanner_stop(app->nfc_scanner);
@@ -236,12 +200,10 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
                 app->nfc_scanner = NULL;
             }
 
-            // Activation sincrona - retorna UID + ATQA + SAK
             Iso14443_3aData* data = iso14443_3a_alloc();
             Iso14443_3aError err = iso14443_3a_poller_sync_read(app->nfc, data);
 
             if(err == Iso14443_3aErrorNone) {
-                // Format UID como hex
                 char* p = app->uid_buffer;
                 size_t remaining = sizeof(app->uid_buffer);
                 for(size_t i = 0; i < data->uid_len && remaining > 3; i++) {
@@ -255,7 +217,6 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
                 else
                     *p = '\0';
 
-                // ATQA (high byte first) + SAK no campo Dados
                 snprintf(
                     app->card_data_buffer,
                     sizeof(app->card_data_buffer),
@@ -272,7 +233,6 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
                     data->atqa[0],
                     data->sak);
             } else {
-                // Cartao saiu do campo entre detect e sync_read
                 app->uid_buffer[0] = '\0';
                 snprintf(
                     app->card_data_buffer,
@@ -283,13 +243,8 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
             }
             iso14443_3a_free(data);
 
-            // Libera Nfc - nao precisamos mais
-            if(app->nfc) {
-                nfc_free(app->nfc);
-                app->nfc = NULL;
-            }
+            // NAO frees app->nfc - eh app-lifetime
 
-            // Mapeia protocolo para o DB
             const char* proto_name = nfc_device_get_protocol_name(app->detected_protocol);
             FURI_LOG_I("ChaosID", "HF protocol_name: '%s'", proto_name ? proto_name : "(null)");
             app->last_result = cards_db_find_by_nfc_name(proto_name);
@@ -307,7 +262,6 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
         }
 
         case ChaosIdCustomEventPhaseHfDone:
-            // HF timeout - se hf_done ja foi setado, CardFound esta na fila
             if(app->hf_done) {
                 consumed = true;
                 break;
@@ -323,6 +277,18 @@ bool chaos_id_scene_scanning_on_event(void* context, SceneManagerEvent event) {
             furi_timer_stop(app->scan_timer);
             stop_lf_worker(app);
             stop_hf_scanner(app);
+
+            if(app->last_result) {
+                ScanLogEntry entry = {
+                    .freq_label = card_frequency_label(app->last_result->frequency),
+                    .protocol = app->last_result->protocol,
+                    .uid = app->uid_buffer,
+                    .data = app->card_data_buffer,
+                    .risk_label = card_risk_label(app->last_result->risk),
+                };
+                scan_log_append(app->storage, &entry);
+            }
+
             scene_manager_next_scene(app->scene_manager, ChaosIdSceneResult);
             consumed = true;
             break;

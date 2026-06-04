@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Cafe com Solda / Cristiano Santana
-//
-// This file is part of ChaosID.
-// ChaosID is free software: you can redistribute it and/or modify it under
-// the terms of the GNU General Public License as published by the Free
-// Software Foundation, either version 3 of the License, or (at your option)
-// any later version. See <https://www.gnu.org/licenses/gpl-3.0.html>.
 
 #include "chaos_id_app.h"
 #include "scenes/chaos_id_scene.h"
@@ -27,6 +21,8 @@ static ChaosIdApp* chaos_id_app_alloc(void) {
     memset(app, 0, sizeof(ChaosIdApp));
 
     app->gui = furi_record_open(RECORD_GUI);
+    app->storage = furi_record_open(RECORD_STORAGE);
+
     app->view_dispatcher = view_dispatcher_alloc();
     app->scene_manager = scene_manager_alloc(&chaos_id_scene_handlers, app);
 
@@ -48,6 +44,13 @@ static ChaosIdApp* chaos_id_app_alloc(void) {
     view_dispatcher_add_view(
         app->view_dispatcher, ChaosIdViewWidget, widget_get_view(app->widget));
 
+    // App-lifetime allocations: aloca UMA VEZ, reutiliza em cada scan.
+    // Evita BusFault por contention de periferico no ciclo alloc/free repetido
+    // do LFRFIDWorker e Nfc.
+    app->lf_dict = protocol_dict_alloc(lfrfid_protocols, LFRFIDProtocolMax);
+    app->lf_worker = lfrfid_worker_alloc(app->lf_dict);
+    app->nfc = nfc_alloc();
+
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     return app;
 }
@@ -63,9 +66,15 @@ static void chaos_id_app_free(ChaosIdApp* app) {
     popup_free(app->popup);
     widget_free(app->widget);
 
+    // App-lifetime cleanup
+    if(app->lf_worker) lfrfid_worker_free(app->lf_worker);
+    if(app->lf_dict) protocol_dict_free(app->lf_dict);
+    if(app->nfc) nfc_free(app->nfc);
+
     scene_manager_free(app->scene_manager);
     view_dispatcher_free(app->view_dispatcher);
 
+    furi_record_close(RECORD_STORAGE);
     furi_record_close(RECORD_GUI);
     free(app);
 }

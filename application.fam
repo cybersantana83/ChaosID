@@ -20,5 +20,6 @@ App(
         "chaos_id.c",
         "scenes/*.c",
         "database/*.c",
+        "storage/*.c",
     ],
 )

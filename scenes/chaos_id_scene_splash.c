@@ -12,6 +12,7 @@
 
 typedef enum {
     SplashIndexScan,
+    SplashIndexHistory,
     SplashIndexAbout,
 } SplashIndex;
 
@@ -19,6 +20,8 @@ static void splash_submenu_callback(void* context, uint32_t index) {
     ChaosIdApp* app = context;
     if(index == SplashIndexScan) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventStartScan);
+    } else if(index == SplashIndexHistory) {
+        view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventShowHistory);
     } else if(index == SplashIndexAbout) {
         view_dispatcher_send_custom_event(app->view_dispatcher, ChaosIdCustomEventShowAbout);
     }
@@ -31,6 +34,8 @@ void chaos_id_scene_splash_on_enter(void* context) {
     submenu_add_item(
         app->submenu, "Iniciar Scan", SplashIndexScan, splash_submenu_callback, app);
     submenu_add_item(
+        app->submenu, "Historico", SplashIndexHistory, splash_submenu_callback, app);
+    submenu_add_item(
         app->submenu, "Sobre", SplashIndexAbout, splash_submenu_callback, app);
     view_dispatcher_switch_to_view(app->view_dispatcher, ChaosIdViewMenu);
 }
@@ -40,14 +45,18 @@ bool chaos_id_scene_splash_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
     if(event.type == SceneManagerEventTypeCustom) {
         switch(event.event) {
-            case ChaosIdCustomEventStartScan:
-                scene_manager_next_scene(app->scene_manager, ChaosIdSceneScanning);
-                consumed = true;
-                break;
-            case ChaosIdCustomEventShowAbout:
-                scene_manager_next_scene(app->scene_manager, ChaosIdSceneAbout);
-                consumed = true;
-                break;
+        case ChaosIdCustomEventStartScan:
+            scene_manager_next_scene(app->scene_manager, ChaosIdSceneScanning);
+            consumed = true;
+            break;
+        case ChaosIdCustomEventShowHistory:
+            scene_manager_next_scene(app->scene_manager, ChaosIdSceneHistory);
+            consumed = true;
+            break;
+        case ChaosIdCustomEventShowAbout:
+            scene_manager_next_scene(app->scene_manager, ChaosIdSceneAbout);
+            consumed = true;
+            break;
         }
     }
     return consumed;

@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Cafe com Solda / Cristiano Santana
-//
-// This file is part of ChaosID.
-// ChaosID is free software: you can redistribute it and/or modify it under
-// the terms of the GNU General Public License as published by the Free
-// Software Foundation, either version 3 of the License, or (at your option)
-// any later version. See <https://www.gnu.org/licenses/gpl-3.0.html>.
 
 #pragma once
 
@@ -26,8 +20,8 @@
 #include <nfc/nfc_scanner.h>
 #include <nfc/nfc_device.h>
 #include <nfc/protocols/nfc_protocol.h>
-#include <nfc/protocols/iso14443_3a/iso14443_3a.h>
-#include <nfc/protocols/iso14443_3a/iso14443_3a_poller_sync.h>
+
+#include <storage/storage.h>
 
 #include "database/cards_db.h"
 
@@ -35,6 +29,7 @@ typedef enum {
     ChaosIdSceneSplash,
     ChaosIdSceneScanning,
     ChaosIdSceneResult,
+    ChaosIdSceneHistory,
     ChaosIdSceneAbout,
     ChaosIdSceneCount,
 } ChaosIdScene;
@@ -48,9 +43,10 @@ typedef enum {
 typedef enum {
     ChaosIdCustomEventStartScan = 100,
     ChaosIdCustomEventShowAbout,
+    ChaosIdCustomEventShowHistory,
     ChaosIdCustomEventPhaseLfDone,
     ChaosIdCustomEventPhaseHfDone,
-    ChaosIdCustomEventHfDetected, // scanner pegou protocolo, hora de fazer sync_read
+    ChaosIdCustomEventHfDetected,
     ChaosIdCustomEventCardFound,
     ChaosIdCustomEventScanFailed,
 } ChaosIdCustomEvent;
@@ -64,21 +60,23 @@ typedef struct {
     Widget* widget;
     Popup* popup;
 
-    FuriTimer* scan_timer;
-    uint8_t scan_phase; // 0 = LF, 1 = HF, 2 = done
+    Storage* storage;
 
-    // LF worker state (v0.2 real integration)
+    FuriTimer* scan_timer;
+    uint8_t scan_phase; // 0 = LF, 1 = HF
+
+    // LF worker state
     LFRFIDWorker* lf_worker;
     ProtocolDict* lf_dict;
-    bool lf_done; // guard: ignora callbacks pos-timeout/transicao
+    bool lf_done;
 
-    // HF scanner state (v0.2 real integration)
+    // HF scanner state
     Nfc* nfc;
     NfcScanner* nfc_scanner;
     bool hf_done;
-    NfcProtocol detected_protocol; // protocolo detectado pelo scanner
+    NfcProtocol detected_protocol;
 
     const CardProfile* last_result;
-    char uid_buffer[48];          // UID hex bruto (bytes raw via get_data)
-    char card_data_buffer[48];    // Dados parseados (render_brief_data: FC, Card, etc)
+    char uid_buffer[48];
+    char card_data_buffer[48];
 } ChaosIdApp;
