@@ -9,8 +9,8 @@ App(
     fap_icon="assets/icon.png",
     fap_category="NFC",
     fap_version="0.6",
-    fap_description="Forensic card identifier for Flipper Zero. Auto-detects LF (125 kHz) and HF (13.56 MHz) protocols, extracts UID/ATQA/SAK, and classifies security risk based on a built-in database of crypto status, attack vectors, and historical exploits. Runs a dictionary attack against MIFARE Classic default keys to demonstrate live whether a corporate badge or transit card is trivially clonable. Persists scan history to CSV for systematic auditing.",
-    fap_author="cybersantana83 (Cafe com Solda)",
+    fap_description="Card forensics + risk classification + MIFARE Classic dictionary attack",
+    fap_author="cybersantana83 (Cristiano Santana, Cafe com Solda)",
     fap_weburl="https://github.com/cybersantana83/ChaosID",
     sources=[
         "chaos_id.c",
