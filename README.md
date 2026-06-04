@@ -1,5 +1,10 @@
 # ChaosID
 
+![Build](https://github.com/cybersantana83/ChaosID/actions/workflows/release.yml/badge.svg)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+![GitHub release](https://img.shields.io/github/v/release/cybersantana83/ChaosID)
+![Downloads](https://img.shields.io/github/downloads/cybersantana83/ChaosID/total)
+
 Perito forense de cartoes pro Flipper Zero. Faz scan sequencial LF (125 kHz) -> HF (13.56 MHz), identifica o protocolo e devolve um dossie com tecnologia, criptografia, vetor de ataque conhecido, ano da quebra e nivel de risco.
 
 Parte da serie **Chaos IAM** | feito pela **Cafe com Solda**.
