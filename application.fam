@@ -1,21 +1,17 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 Cafe com Solda / Cristiano Santana
-# ChaosID - Card identification + forensics for Flipper Zero
-# Distributed under GNU GPL v3 or later. See LICENSE file.
-
 App(
     appid="chaos_id",
     name="ChaosID",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="chaos_id_app",
-    requires=["gui"],
-    stack_size=4 * 1024,
-    fap_category="NFC",
-    fap_author="Cafe com Solda",
-    fap_version="0.1",
-    fap_description="Card identification + security forensics for LF/HF",
+    requires=["gui", "storage"],
+    stack_size=2 * 1024,
+    order=20,
     fap_icon="assets/icon.png",
-    fap_icon_assets="assets",
+    fap_category="NFC",
+    fap_version="0.6",
+    fap_description="Forensic card identifier for Flipper Zero. Auto-detects LF (125 kHz) and HF (13.56 MHz) protocols, extracts UID/ATQA/SAK, and classifies security risk based on a built-in database of crypto status, attack vectors, and historical exploits. Runs a dictionary attack against MIFARE Classic default keys to demonstrate live whether a corporate badge or transit card is trivially clonable. Persists scan history to CSV for systematic auditing.",
+    fap_author="cybersantana83 (Cafe com Solda)",
+    fap_weburl="https://github.com/cybersantana83/ChaosID",
     sources=[
         "chaos_id.c",
         "scenes/*.c",
